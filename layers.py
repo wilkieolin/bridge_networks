@@ -1,3 +1,10 @@
+"""
+This file contains the layers used to construct the larger models for bridge networks.
+
+Wilkie Olin-Ammentorp, 2021
+University of Califonia, San Diego
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -1,3 +1,10 @@
+"""
+This file contains the models used to construct, train, and execute bridge networks.
+
+Wilkie Olin-Ammentorp, 2021
+University of Califonia, San Diego
+"""
+
 import numpy as np
 
 import tensorflow as tf
@@ -329,10 +336,6 @@ class IrisModel(keras.Model):
             self.label_ch = Channel(self.n_d, self.n_hidden)
         #label to symbol encoder
         self.label_encoder = LabelEncoder(self.n_d, self.n_classes, self.overscan, noise=self.noise)
-        #symbol to innermost symbol encoder
-        #replay memory
-        self.cache = tf.zeros((0, self.n_d), dtype=tf.float32)
-        self.cache_limit = kwargs.get("cache_limit", 10000)
 
     """
     Accuracy of the network at classification. Runs data from image over to class.
@@ -468,7 +471,7 @@ class IrisModel(keras.Model):
         return h_vectors
 
     """
-    Get the self's internal values so they can be stored and inspected or used
+    Get the model's internal values so they can be stored and inspected or used
     later for distillation.
     """
     def get_internals(self, dataloader):
@@ -619,27 +622,7 @@ class IrisModel(keras.Model):
                 print(losses[-1])
 
         return symbols.value(), np.array(losses)
-        
 
-    def reconstruct_rbm(self, n_s, steps):
-        symbols = self.random_samples(n_s)
-
-        losses = []
-        for i in range(steps):
-            x = self.image_ch.reverse(symbols)
-            y = self.label_ch.reverse(symbols)
-            hx = self.image_ch.forward(x)
-            hy = self.label_ch.forward(y)
-            hp = bundle(hx, hy)
-
-            loss = vsa_loss(symbols, hp)
-            losses.append(np.array(loss))
-
-            symbols = hp
-
-
-        return symbols, np.array(losses)
-        
     def reconstruct_info_step(self, h0, optimizer=None):
 
         #option to use external optimizer other than model default
@@ -662,24 +645,6 @@ class IrisModel(keras.Model):
 
             losses.append(x_loop)
             losses.append(y_loop)
-
-            # loss_fn = lambda x, y: 1 - tf.math.abs(vsa_loss(x,y))
-
-            # #create a lower loss the more different the example is after passing back
-            # #through the channels
-            # if rvs_info:
-            #     x_back = loss_fn(h0, x)
-            #     y_back = loss_fn(h0, y)
-            #     losses.append(x_back)
-            #     losses.append(y_back)
-
-            # #create a lower loss the more different the example is after passing forward
-            # #through the channels
-            # if fwd_info:
-            #     x_fwd = loss_fn(hx, x)
-            #     y_fwd = loss_fn(hy, y)
-            #     losses.append(x_fwd)
-            #     losses.append(y_fwd)
  
             loss = tf.reduce_mean(losses)
 
@@ -689,6 +654,26 @@ class IrisModel(keras.Model):
         optimizer.apply_gradients(zip(gradients, trainable_vars))
 
         return losses
+
+    def reconstruct_rbm(self, n_s, steps):
+        symbols = self.random_samples(n_s)
+
+        losses = []
+        for i in range(steps):
+            x = self.image_ch.reverse(symbols)
+            y = self.label_ch.reverse(symbols)
+            hx = self.image_ch.forward(x)
+            hy = self.label_ch.forward(y)
+            hp = bundle(hx, hy)
+
+            loss = vsa_loss(symbols, hp)
+            losses.append(np.array(loss))
+
+            symbols = hp
+
+        return symbols, np.array(losses)
+        
+    
 
     """
     Given a set of class-image symbols, reconstruct the image data from these symbols.
@@ -880,30 +865,3 @@ class IrisModel(keras.Model):
 
         self.optimizer.apply_gradients(zip(gradients, trainable_vars))
         return np.array(losses)
-
-    """
-    Given a set of image-label symbols which are to be stored in the internal cache, take a random
-    subset and add it to the internal cache, randomly removing entries which are over the cache limit.
-    """
-    def update_cache(self, loader, cache_proportion=1.0):
-        imlbl_symbols = []
-        for data in iter(loader):
-            (x, y) = data
-            x = self.convert_img(x)
-            y = self.convert_label(y)
-            h = self.forward(x,y)
-            imlbl_symbols.append(h)
-        imlbl_symbols = tf.concat(imlbl_symbols, axis=0)
-
-        n_true = imlbl_symbols.shape[0]
-        n_sample = int(tf.floor(n_true * cache_proportion))
-        sample_inds = tf.random.shuffle(tf.range(0, n_true, 1))[0:n_sample]
-        sample_symbols = tf.gather(imlbl_symbols, sample_inds, axis=0)
-        
-        #add the new examples to the cache, shuffle it, and cut it down if it's over the limit
-        self.cache = tf.concat((self.cache, sample_symbols), axis=0)
-        self.cache = tf.random.shuffle(self.cache)
-
-        current_size = self.cache.shape[0]
-        if current_size > self.cache_limit:
-            self.cache = self.cache[0:self.cache_limit, ...]

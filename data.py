@@ -352,6 +352,9 @@ def gen_shuffle(n_ex):
     shuffle = lambda x: tf.gather(x, perm, axis=0)
     return shuffle
 
+"""
+Given a confusion matrix, calculate the corresponding accuracy score.
+"""
 def confusion_to_accuracy(confusion):
     total = tf.math.reduce_sum(confusion)
     correct = tf.math.reduce_sum(tf.linalg.diag_part(confusion))
