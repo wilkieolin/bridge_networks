@@ -295,9 +295,9 @@ class VSA_Encoder(keras.Model):
 "Iris" model of image classification. Takes intputs from two senses (vision, hearing) and learns how
 the invariants between these data relate to one another. 
 """
-class IrisModel(keras.Model):
+class BridgeModel(keras.Model):
     def __init__(self, conv_head, inv_head, ds_info, **kwargs):
-        super(IrisModel, self).__init__()
+        super(BridgeModel, self).__init__()
         
         #set constants for the dataset: image shape and total # of classes
         self.img_shape = ds_info.features['image'].shape

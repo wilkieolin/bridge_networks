@@ -1,3 +1,11 @@
+"""
+This file defines the control models used to compare performance of the bridge network
+without VSA ops.
+
+Wilkie Olin-Ammentorp, 2021
+University of Califonia, San Diego
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -82,12 +90,11 @@ def StandardModel(conv_head, ds_info, **kwargs):
 
 
 """
-"Iris" model of image classification. Takes intputs from two senses (vision, hearing) and learns how
-the invariants between these data relate to one another. 
+Control version of Bridge model. Uses ReLUs and addition instead of FHRR ops.
 """
-class ControlIrisModel(keras.Model):
+class ControlBridgeModel(keras.Model):
     def __init__(self, conv_head, inv_head, ds_info, **kwargs):
-        super(ControlIrisModel, self).__init__()
+        super(ControlBridgeModel, self).__init__()
         
         #set constants for the dataset: image shape and total # of classes
         self.img_shape = ds_info.features['image'].shape

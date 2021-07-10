@@ -62,7 +62,7 @@ def bundle_many(*args):
     bundled = tf.math.angle(bundled) / pi
     
     return bundled
-    
+
 """
 Given a confusion matrix, calculate the corresponding accuracy score.
 """
@@ -130,6 +130,18 @@ def make_codebook(n_classes, n_d, matrix=True):
         cb = tf.random.uniform((n_classes, n_d), minval=-1.0, maxval=1.0)
 
     return cb
+
+"""
+Match normalization parameters between two bridge models.
+"""
+def match_normalize(source, dest):
+    norm = source.img_encoder.norm_symbols
+    mm = norm.moving_mean
+    ms = norm.moving_std
+    
+    norm2 = dest.img_encoder.norm_symbols
+    norm2.moving_mean = mm
+    norm2.moving_std = ms
 
 """
 Bind multiple vectors together at once (x1 (x) x2 (x) ... (x) xn)
